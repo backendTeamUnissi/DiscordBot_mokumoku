@@ -66,43 +66,45 @@ func voiceStateUpdate(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
         return
     }
 
+	// vsuがnilでないことが保証されているので、ここで変数を定義
+    userID := vsu.UserID
+    channelID := os.Getenv("DISCORDCHANNELID")
+
     // チャンネルに参加した場合、現在の時間を記録
 	// vsu.ChannelID: チャンネルのID, vsu.BeforeUpdate: 以前の状態
     if vsu.ChannelID != "" && vsu.BeforeUpdate == nil {
-        userJoinTimes[vsu.UserID] = time.Now()
+        userJoinTimes[userID] = time.Now()
         log.Printf("User %s has joined the voice channel at %v", vsu.UserID, userJoinTimes[vsu.UserID])
         return
 	}
 
 	// チャンネルを退出した場合の処理
-    if vsu.BeforeUpdate != nil && vsu.ChannelID == "" {
-        userID := vsu.UserID
-        channelID := os.Getenv("DISCORDCHANNELID") // .envからチャンネルIDを取得
+if vsu.BeforeUpdate != nil && vsu.ChannelID == "" {
+    handleUserExit(s, userID, channelID)
+}
+}
 
-        // ユーザーIDをキーに参加時刻を取得
-		// joinTimes: チャンネルに参加した時刻
-		// ok: userJoinTimesにユーザーIDが存在するかどうか (存在すればtrue)
-        joinTime, ok := userJoinTimes[userID]
+// ユーザーが退出したときの処理を行う関数
+// handleUserExit：チャンネルを退出したときに呼び出される処理
+func handleUserExit(s *discordgo.Session, userID, channelID string) {
+    // ユーザーIDをキーに参加時刻を取得
+    joinTime, ok := userJoinTimes[userID]
+    if ok {
+        // 滞在時間を計算
+        duration := time.Since(joinTime)
 
-        if ok {
+        // メッセージを作成
+        durationMessage := fmt.Sprintf("<@%s> Good job!! You stayed for %v.", userID, duration)
 
-			// 滞在時間を計算
-			// duration: 参加時刻から現在時刻までの経過時間
-            duration := time.Since(joinTime) 
-
-            // メッセージを作成
-            durationMessage := fmt.Sprintf("<@%s> Good job!! You stayed for %v.", userID, duration)
-
-			// 作成したメッセージをDiscordの特定のチャンネルに送信
-            _, err := s.ChannelMessageSend(channelID, durationMessage)
-            if err != nil {
-                log.Printf("Error sending message: %v", err)
-            }
-
-            // 参加時刻の削除
-            delete(userJoinTimes, userID)
-        } else {
-            log.Printf("No join time found for user %s", userID)
+        // メッセージをDiscordの特定のチャンネルに送信
+        _, err := s.ChannelMessageSend(channelID, durationMessage)
+        if err != nil {
+            log.Printf("Error sending message: %v", err)
         }
+
+        // 参加時刻の削除
+        delete(userJoinTimes, userID)
+    } else {
+        log.Printf("No join time found for user %s", userID)
     }
 }
