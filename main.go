@@ -29,6 +29,12 @@ func main() {
 		log.Fatal("Discordトークンが設定されていません。環境変数DISCORDTOKENを設定してください。")
 	}
 
+	// Getenv：環境変数からチャンネルIDを取得
+	channelID := os.Getenv("DISCORDCHANNELID")
+	if channelID == "" {
+		log.Fatal("DiscordチャンネルIDが設定されていません。環境変数DISCORDCHANNELIDを設定してください。")
+	}
+
 	// discordgo.New：DiscordAPIに接続するためのセクションを作成
 	// token: Discordボットのトークン
 	// dg: Discordセッションのインスタンス
@@ -71,7 +77,7 @@ func voiceStateUpdate(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 	// チャンネルを退出した場合の処理
     if vsu.BeforeUpdate != nil && vsu.ChannelID == "" {
         userID := vsu.UserID
-        channelID := "1278707009549631552" // メッセージを送信するチャンネルのID
+        channelID := os.Getenv("DISCORDCHANNELID") // .envからチャンネルIDを取得
 
         // ユーザーIDをキーに参加時刻を取得
 		// joinTimes: チャンネルに参加した時刻
