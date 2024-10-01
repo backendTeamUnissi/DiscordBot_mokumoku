@@ -49,6 +49,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening connection: %v", err)
 	}
+	// Botがシャットダウンされたときにセッションを閉じる
+	defer dg.Close()
 	fmt.Println("Bot is now running. Press CTRL+C to exit")
 
 	// ボイスチャンネルの入退出を監視
