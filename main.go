@@ -30,9 +30,15 @@ func main() {
 	}
 
 	// Getenv：環境変数からチャンネルIDを取得
-	channelID := os.Getenv("DISCORDCHANNELID")
-	if channelID == "" {
+	textChannelID := os.Getenv("DISCORDTEXTCHANNELID")
+	if textChannelID == "" {
 		log.Fatal("DiscordチャンネルIDが設定されていません。環境変数DISCORDCHANNELIDを設定してください。")
+	}
+
+	// Getenv: 環境変数からボイスチャンネルIDを取得
+	voiceChannelID := os.Getenv("DISCORDVOICECHANNELID")
+	if voiceChannelID == "" {
+		log.Fatal("DiscordボイスチャンネルIDが設定されていません。環境変数DISCORDVOICECHANNELIDを設定してください。")
 	}
 
 	// discordgo.New：DiscordAPIに接続するためのセクションを作成
@@ -49,20 +55,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening connection: %v", err)
 	}
+
 	// Botがシャットダウンされたときにセッションを閉じる
 	defer dg.Close()
 	fmt.Println("Bot is now running. Press CTRL+C to exit")
 
-	// ボイスチャンネルの入退出を監視
-	dg.AddHandler(voiceStateUpdate)
+    // ボイスチャンネルの入退出を監視
+	// s: Discordセッション, vsu: ボイスステートの更新情報（ユーザーのボイスチャンネルの状態）
+    dg.AddHandler(func(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
+        voiceStateUpdate(s, vsu, textChannelID, voiceChannelID) // 引数を適切に渡す
+    })
 
 	// 無限ループでBotを実行し続ける
 	select {}
 }
 
-    // voiceStateUpdate：ボイスチャンネルの状態が更新されたときに呼ばれるイベントハンドラ
-	// s: Discordセッション, vsu: ボイスステートの更新情報
-func voiceStateUpdate(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
+// voiceStateUpdate：ボイスチャンネルの状態が更新されたときに呼ばれるイベントハンド￥
+func voiceStateUpdate(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate, textChannelID, voiceChannelID string) {
     if vsu == nil {
         log.Println("VoiceStateUpdate event is nil")
         return
@@ -70,25 +79,25 @@ func voiceStateUpdate(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 
 	// vsuがnilでないことが保証されているので、ここで変数を定義
     userID := vsu.UserID
-    channelID := os.Getenv("DISCORDCHANNELID")
 
     // チャンネルに参加した場合、現在の時間を記録
 	// vsu.ChannelID: チャンネルのID, vsu.BeforeUpdate: 以前の状態
-    if vsu.ChannelID != "" && vsu.BeforeUpdate == nil {
+    if vsu.ChannelID == voiceChannelID && vsu.BeforeUpdate == nil { // ボイスチャンネルに参加
         userJoinTimes[userID] = time.Now()
-        log.Printf("User %s has joined the voice channel at %v", vsu.UserID, userJoinTimes[vsu.UserID])
+        log.Printf("User %s has joined the voice channel at %v", userID, userJoinTimes[userID])
         return
-	}
+    }
 
 	// チャンネルを退出した場合の処理
-if vsu.BeforeUpdate != nil && vsu.ChannelID == "" {
-    handleUserExit(s, userID, channelID)
-}
+    if vsu.BeforeUpdate != nil && vsu.ChannelID == "" {
+        handleUserExit(s, userID, textChannelID) // textChannelIDを引数に渡す
+    }
 }
 
 // ユーザーが退出したときの処理を行う関数
 // handleUserExit：チャンネルを退出したときに呼び出される処理
-func handleUserExit(s *discordgo.Session, userID, channelID string) {
+// s: Discordセッション, userID: 退出したユーザーのID, textChannelID: メッセージを送信するチャンネルID
+func handleUserExit(s *discordgo.Session, userID, textChannelID string) {
     // ユーザーIDをキーに参加時刻を取得
     joinTime, ok := userJoinTimes[userID]
     if ok {
@@ -99,7 +108,7 @@ func handleUserExit(s *discordgo.Session, userID, channelID string) {
         durationMessage := fmt.Sprintf("<@%s> Good job!! You stayed for %v.", userID, duration)
 
         // メッセージをDiscordの特定のチャンネルに送信
-        _, err := s.ChannelMessageSend(channelID, durationMessage)
+        _, err := s.ChannelMessageSend(textChannelID, durationMessage)
         if err != nil {
             log.Printf("Error sending message: %v", err)
         }
