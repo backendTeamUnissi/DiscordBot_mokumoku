@@ -3,11 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
-	"os"
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
+
 )
 
 // グローバル変数の宣言！（初期化はmain関数内で行う）
@@ -20,26 +19,7 @@ var userJoinTimes = make(map[string]time.Time)
 
 func main() {
 	// .envファイルから環境変数を読み込み
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf(".envファイルの読み込みに失敗しました: %v", err)
-	}
-
-	// ここで初期化
-	token = os.Getenv("DISCORDTOKEN")
-	if token == "" {
-		log.Fatal("Discordトークンが設定されていません。環境変数DISCORDTOKENを設定してください。")
-	}
-
-	textChannelID = os.Getenv("DISCORDTEXTCHANNELID")
-	if textChannelID == "" {
-		log.Fatal("DiscordチャンネルIDが設定されていません。環境変数DISCORDTEXTCHANNELIDを設定してください。")
-	}
-
-	voiceChannelID = os.Getenv("DISCORDVOICECHANNELID")
-	if voiceChannelID == "" {
-		log.Fatal("DiscordボイスチャンネルIDが設定されていません。環境変数DISCORDVOICECHANNELIDを設定してください。")
-	}
+	init_env()
 
 	// DiscordAPIに接続するためのセッションを作成
 	dg, err := discordgo.New("Bot " + token)
