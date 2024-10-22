@@ -129,7 +129,9 @@ func handleUserExit(s *discordgo.Session, userID string) {
 		// Firestoreへのデータ送信
 		ctx := context.Background()
 		docRef := client.Collection("user_profiles").Doc(userID) // コレクション名はusersとする
-
+		if err != nil {
+			log.Printf("Error creating Firestore document reference: %v", err)
+		}
 		// データ構造の定義とFirestoreへの書き込み
 		_, err = docRef.Set(ctx, map[string]interface{}{
 			"TotalStayingTime":  int64(duration.Seconds()), // 滞在時間（秒）
