@@ -8,6 +8,12 @@ import (
 
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
+
+	// Firestore用のパッケージ
+	"context"
+
+	"cloud.google.com/go/firestore"
+	"google.golang.org/api/option"
 )
 
 // グローバル変数の宣言！（初期化はmain関数内で行う）
@@ -18,6 +24,9 @@ var voiceChannelID string
 // userJoinTimes：ユーザーIDをキーに参加時刻を記録するマップ
 var userJoinTimes = make(map[string]time.Time)
 
+// Firestoreクライアントをグローバルに宣言
+var client *firestore.Client
+
 func main() {
 	// .envファイルから環境変数を読み込み
 	err := godotenv.Load()
@@ -25,7 +34,7 @@ func main() {
 		log.Fatalf(".envファイルの読み込みに失敗しました: %v", err)
 	}
 
-	// ここで初期化
+	// 初期化
 	token = os.Getenv("DISCORDTOKEN")
 	if token == "" {
 		log.Fatal("Discordトークンが設定されていません。環境変数DISCORDTOKENを設定してください。")
@@ -40,6 +49,14 @@ func main() {
 	if voiceChannelID == "" {
 		log.Fatal("DiscordボイスチャンネルIDが設定されていません。環境変数DISCORDVOICECHANNELIDを設定してください。")
 	}
+
+	// Firestoreクライアントを初期化
+	ctx := context.Background()
+	client, err = firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile("./peachtech-mokumoku-91af9d3931c9.json"))
+	if err != nil {
+		log.Fatalf("Failed to create Firestore client: %v", err)
+	}
+	defer client.Close()
 
 	// DiscordAPIに接続するためのセッションを作成
 	dg, err := discordgo.New("Bot " + token)
@@ -95,13 +112,36 @@ func handleUserExit(s *discordgo.Session, userID string) {
 		// 滞在時間を計算
 		duration := time.Since(joinTime)
 
-		// メッセージを作成
-		durationMessage := fmt.Sprintf("<@%s> Good job!! You stayed for %v.", userID, duration)
+		// Discordユーザー情報の取得（ユーザー名など）
+		user, err := s.User(userID)
+		if err != nil {
+			log.Printf("Error fetching user info: %v", err)
+			return
+		}
 
-		// メッセージをDiscordの特定のチャンネルに送信
-		_, err := s.ChannelMessageSend(textChannelID, durationMessage)
+		// メッセージを作成してDiscordの特定のチャンネルに送信
+		durationMessage := fmt.Sprintf("<@%s> Good job!! You stayed for %v.", userID, duration)
+		_, err = s.ChannelMessageSend(textChannelID, durationMessage)
 		if err != nil {
 			log.Printf("Error sending message: %v", err)
+		}
+
+		// Firestoreへのデータ送信
+		ctx := context.Background()
+		docRef := client.Collection("user_profiles").Doc(userID) // コレクション名はusersとする
+		if err != nil {
+			log.Printf("Error creating Firestore document reference: %v", err)
+		}
+		// データ構造の定義とFirestoreへの書き込み
+		_, err = docRef.Set(ctx, map[string]interface{}{
+			"TotalStayingTime":  int64(duration.Seconds()), // 滞在時間（秒）
+			"UserID":            userID,
+			"UserName":          user.Username,
+			"UserRank":          0,                         // 初期値または別のロジックで設定可能
+			"WeeklyStayingTime": int64(duration.Seconds()), // 週間滞在時間（ここでは単純に今回の滞在時間）
+		})
+		if err != nil {
+			log.Printf("Error writing to Firestore: %v", err)
 		}
 
 		// 参加時刻の削除
