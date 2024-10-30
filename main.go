@@ -1,31 +1,25 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
-
-	// Firestore用のパッケージ
-	"context"
-
-	"cloud.google.com/go/firestore"
 	"google.golang.org/api/option"
 )
 
-// グローバル変数の宣言！（初期化はmain関数内で行う）
-var token string
-var textChannelID string
-var voiceChannelID string
-
-// userJoinTimes：ユーザーIDをキーに参加時刻を記録するマップ
-var userJoinTimes = make(map[string]time.Time)
-
-// Firestoreクライアントをグローバルに宣言
-var client *firestore.Client
+var (
+	token          string
+	textChannelID  string
+	voiceChannelID string
+	userJoinTimes  = make(map[string]time.Time)
+	client         *firestore.Client
+)
 
 func main() {
 	// .envファイルから環境変数を読み込み
@@ -54,25 +48,23 @@ func main() {
 	ctx := context.Background()
 	client, err = firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile("./peachtech-mokumoku-91af9d3931c9.json"))
 	if err != nil {
-		log.Fatalf("Failed to create Firestore client: %v", err)
+		log.Fatalf("Firestoreクライアントの作成に失敗しました: %v", err)
 	}
 	defer client.Close()
 
 	// DiscordAPIに接続するためのセッションを作成
 	dg, err := discordgo.New("Bot " + token)
 	if err != nil {
-		log.Fatalf("Error creating Discord session: %v", err)
+		log.Fatalf("Discordセッションの作成中にエラーが発生しました: %v", err)
 	}
 
 	// Botを起動し、Discordサーバーに接続
 	err = dg.Open()
 	if err != nil {
-		log.Fatalf("Error opening connection: %v", err)
+		log.Fatalf("接続中にエラーが発生しました: %v", err)
 	}
-
-	// Botがシャットダウンされたときにセッションを閉じる
 	defer dg.Close()
-	fmt.Println("Bot is now running. Press CTRL+C to exit")
+	fmt.Println("Botが起動しました。終了するにはCTRL+Cを押してください。")
 
 	// イベントハンドラの登録
 	dg.AddHandler(voiceStateUpdate)
@@ -84,17 +76,17 @@ func main() {
 // voiceStateUpdate：ボイスチャンネルの状態が更新されたときに呼ばれるイベント
 func voiceStateUpdate(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 	if vsu == nil {
-		log.Println("VoiceStateUpdate event is nil")
+		log.Println("VoiceStateUpdateイベントがnilです")
 		return
 	}
 
-	// vsuがnilでないことが保証されているので、ここで変数を定義
 	userID := vsu.UserID
 
 	// チャンネルに参加した場合、現在の時間を記録
 	if vsu.ChannelID == voiceChannelID && vsu.BeforeUpdate == nil { // ボイスチャンネルに参加
 		userJoinTimes[userID] = time.Now()
-		log.Printf("User %s has joined the voice channel at %v", userID, userJoinTimes[userID])
+		joinTimeStr := userJoinTimes[userID].Format("2006-01-02 15:04:05")
+		log.Printf("ユーザー %s がボイスチャンネルに参加しました。参加時刻: %s", userID, joinTimeStr)
 		return
 	}
 
@@ -115,38 +107,97 @@ func handleUserExit(s *discordgo.Session, userID string) {
 		// Discordユーザー情報の取得（ユーザー名など）
 		user, err := s.User(userID)
 		if err != nil {
-			log.Printf("Error fetching user info: %v", err)
+			log.Printf("ユーザー情報の取得中にエラーが発生しました: %v", err)
 			return
 		}
 
+		// 滞在時間をフォーマット
+		durationStr := formatDuration(duration)
+
 		// メッセージを作成してDiscordの特定のチャンネルに送信
-		durationMessage := fmt.Sprintf("<@%s> Good job!! You stayed for %v.", userID, duration)
+		durationMessage := fmt.Sprintf("<@%s> お疲れ様でした！今回の滞在時間は %s です。", userID, durationStr)
 		_, err = s.ChannelMessageSend(textChannelID, durationMessage)
 		if err != nil {
-			log.Printf("Error sending message: %v", err)
+			log.Printf("メッセージ送信中にエラーが発生しました: %v", err)
 		}
 
 		// Firestoreへのデータ送信
 		ctx := context.Background()
-		docRef := client.Collection("user_profiles").Doc(userID) // コレクション名はusersとする
+		docRef := client.Collection("user_profiles").Doc(userID)
+
+		// 既存のデータを取得
+		docSnap, err := docRef.Get(ctx)
 		if err != nil {
-			log.Printf("Error creating Firestore document reference: %v", err)
+			log.Printf("ドキュメントの取得中にエラーが発生しました: %v", err)
+			return
 		}
-		// データ構造の定義とFirestoreへの書き込み
+
+		var totalStayingTime int64 = 0
+		var weeklyStayingTime int64 = 0
+
+		if docSnap.Exists() {
+			data := docSnap.Data()
+			// TotalStayingTimeを取得
+			if val, ok := data["TotalStayingTime"]; ok {
+				switch v := val.(type) {
+				case int64:
+					totalStayingTime = v
+				case int:
+					totalStayingTime = int64(v)
+				case float64:
+					totalStayingTime = int64(v)
+				default:
+					log.Printf("TotalStayingTimeの予期しない型: %T", val)
+				}
+			}
+			// WeeklyStayingTimeを取得
+			if val, ok := data["WeeklyStayingTime"]; ok {
+				switch v := val.(type) {
+				case int64:
+					weeklyStayingTime = v
+				case int:
+					weeklyStayingTime = int64(v)
+				case float64:
+					weeklyStayingTime = int64(v)
+				default:
+					log.Printf("WeeklyStayingTimeの予期しない型: %T", val)
+				}
+			}
+		}
+
+		// 新しい滞在時間を加算
+		durationSeconds := int64(duration.Seconds())
+		totalStayingTime += durationSeconds
+		weeklyStayingTime += durationSeconds
+
+		// Firestoreにデータを書き込む
 		_, err = docRef.Set(ctx, map[string]interface{}{
-			"TotalStayingTime":  int64(duration.Seconds()), // 滞在時間（秒）
+			"TotalStayingTime":  totalStayingTime,
 			"UserID":            userID,
 			"UserName":          user.Username,
-			"UserRank":          0,                         // 初期値または別のロジックで設定可能
-			"WeeklyStayingTime": int64(duration.Seconds()), // 週間滞在時間（ここでは単純に今回の滞在時間）
+			"UserRank":          0,
+			"WeeklyStayingTime": weeklyStayingTime,
 		})
 		if err != nil {
-			log.Printf("Error writing to Firestore: %v", err)
+			log.Printf("Firestoreへの書き込み中にエラーが発生しました: %v", err)
 		}
+
+		// ログに滞在時間を出力
+		log.Printf("ユーザー %s の滞在時間: %s", userID, durationStr)
 
 		// 参加時刻の削除
 		delete(userJoinTimes, userID)
 	} else {
-		log.Printf("No join time found for user %s", userID)
+		log.Printf("ユーザー %s の参加時刻が見つかりません", userID)
 	}
+}
+
+// formatDuration：滞在時間を時分秒の形式にフォーマット
+func formatDuration(duration time.Duration) string {
+	totalSeconds := int(duration.Seconds())
+	hours := totalSeconds / 3600
+	minutes := (totalSeconds % 3600) / 60
+	seconds := totalSeconds % 60
+
+	return fmt.Sprintf("%02d時間%02d分%02d秒", hours, minutes, seconds)
 }
