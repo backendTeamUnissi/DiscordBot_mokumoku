@@ -13,13 +13,16 @@ import (
 	"google.golang.org/api/option"
 )
 
-var (
-	token          string
-	textChannelID  string
-	voiceChannelID string
-	userJoinTimes  = make(map[string]time.Time)
-	client         *firestore.Client
-)
+// グローバル変数の宣言！（初期化はmain関数内で行う）
+var token string
+var textChannelID string
+var voiceChannelID string
+
+// userJoinTimes：ユーザーIDをキーに参加時刻を記録するマップ
+var userJoinTimes = make(map[string]time.Time)
+
+// Firestoreクライアントをグローバルに宣言
+var client *firestore.Client
 
 func main() {
 	// .envファイルから環境変数を読み込み
