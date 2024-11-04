@@ -141,30 +141,16 @@ func handleUserExit(s *discordgo.Session, userID string) {
 		if docSnap.Exists() {
 			data := docSnap.Data()
 			// TotalStayingTimeを取得
-			if val, ok := data["TotalStayingTime"]; ok {
-				switch v := val.(type) {
-				case int64:
-					totalStayingTime = v
-				case int:
-					totalStayingTime = int64(v)
-				case float64:
-					totalStayingTime = int64(v)
-				default:
-					log.Printf("Unexpected type for TotalStayingTime: %T", val)
-				}
+			if val, ok := data["TotalStayingTime"].(int64); ok {
+				totalStayingTime = val
+			} else {
+				log.Printf("TotalStayingTime is not of type int64")
 			}
 			// WeeklyStayingTimeを取得
-			if val, ok := data["WeeklyStayingTime"]; ok {
-				switch v := val.(type) {
-				case int64:
-					weeklyStayingTime = v
-				case int:
-					weeklyStayingTime = int64(v)
-				case float64:
-					weeklyStayingTime = int64(v)
-				default:
-					log.Printf("Unexpected type for WeeklyStayingTime: %T", val)
-				}
+			if val, ok := data["WeeklyStayingTime"].(int64); ok {
+				weeklyStayingTime = val
+			} else {
+				log.Printf("WeeklyStayingTime is not of type int64")
 			}
 		}
 
