@@ -77,19 +77,20 @@ func main() {
 }
 
 // voiceStateUpdate：ボイスチャンネルの状態が更新されたときに呼ばれるイベント
+
 func voiceStateUpdate(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 	if vsu == nil {
-		log.Println("VoiceStateUpdateイベントがnilです")
+		log.Println("VoiceStateUpdate event is nil")
 		return
 	}
 
 	userID := vsu.UserID
 
 	// チャンネルに参加した場合、現在の時間を記録
-	if vsu.ChannelID == voiceChannelID && vsu.BeforeUpdate == nil { // ボイスチャンネルに参加
+	if vsu.ChannelID == voiceChannelID && vsu.BeforeUpdate == nil {
 		userJoinTimes[userID] = time.Now()
 		joinTimeStr := userJoinTimes[userID].Format("2006-01-02 15:04:05")
-		log.Printf("ユーザー %s がボイスチャンネルに参加しました。参加時刻: %s", userID, joinTimeStr)
+		log.Printf("User %s joined the voice channel at %s", userID, joinTimeStr)
 		return
 	}
 
@@ -110,7 +111,7 @@ func handleUserExit(s *discordgo.Session, userID string) {
 		// Discordユーザー情報の取得（ユーザー名など）
 		user, err := s.User(userID)
 		if err != nil {
-			log.Printf("ユーザー情報の取得中にエラーが発生しました: %v", err)
+			log.Printf("Error retrieving user information: %v", err)
 			return
 		}
 
@@ -121,7 +122,7 @@ func handleUserExit(s *discordgo.Session, userID string) {
 		durationMessage := fmt.Sprintf("<@%s> お疲れ様でした！今回の滞在時間は %s です。", userID, durationStr)
 		_, err = s.ChannelMessageSend(textChannelID, durationMessage)
 		if err != nil {
-			log.Printf("メッセージ送信中にエラーが発生しました: %v", err)
+			log.Printf("Error sending message: %v", err)
 		}
 
 		// Firestoreへのデータ送信
@@ -186,12 +187,12 @@ func handleUserExit(s *discordgo.Session, userID string) {
 		}
 
 		// ログに滞在時間を出力
-		log.Printf("ユーザー %s の滞在時間: %s", userID, durationStr)
+		log.Printf("User %s's staying duration: %s", userID, durationStr)
 
 		// 参加時刻の削除
 		delete(userJoinTimes, userID)
 	} else {
-		log.Printf("ユーザー %s の参加時刻が見つかりません", userID)
+		log.Printf("Join time for user %s not found", userID)
 	}
 }
 
