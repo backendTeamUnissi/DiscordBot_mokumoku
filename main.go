@@ -28,46 +28,46 @@ func main() {
 	// .envファイルから環境変数を読み込み
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf(".envファイルの読み込みに失敗しました: %v", err)
+		log.Fatalf("Failed to load .env file: %v", err)
 	}
 
 	// 初期化
 	token = os.Getenv("DISCORDTOKEN")
 	if token == "" {
-		log.Fatal("Discordトークンが設定されていません。環境変数DISCORDTOKENを設定してください。")
+		log.Fatal("Discord token is not set. Please set the DISCORDTOKEN environment variable.")
 	}
 
 	textChannelID = os.Getenv("DISCORDTEXTCHANNELID")
 	if textChannelID == "" {
-		log.Fatal("DiscordチャンネルIDが設定されていません。環境変数DISCORDTEXTCHANNELIDを設定してください。")
+		log.Fatal("Discord text channel ID is not set. Please set the DISCORDTEXTCHANNELID environment variable.")
 	}
 
 	voiceChannelID = os.Getenv("DISCORDVOICECHANNELID")
 	if voiceChannelID == "" {
-		log.Fatal("DiscordボイスチャンネルIDが設定されていません。環境変数DISCORDVOICECHANNELIDを設定してください。")
+		log.Fatal("Discord voice channel ID is not set. Please set the DISCORDVOICECHANNELID environment variable.")
 	}
 
 	// Firestoreクライアントを初期化
 	ctx := context.Background()
 	client, err = firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile("./peachtech-mokumoku-91af9d3931c9.json"))
 	if err != nil {
-		log.Fatalf("Firestoreクライアントの作成に失敗しました: %v", err)
+		log.Fatalf("Failed to create Firestore client: %v", err)
 	}
 	defer client.Close()
 
 	// DiscordAPIに接続するためのセッションを作成
 	dg, err := discordgo.New("Bot " + token)
 	if err != nil {
-		log.Fatalf("Discordセッションの作成中にエラーが発生しました: %v", err)
+		log.Fatalf("Error creating Discord session: %v", err)
 	}
 
 	// Botを起動し、Discordサーバーに接続
 	err = dg.Open()
 	if err != nil {
-		log.Fatalf("接続中にエラーが発生しました: %v", err)
+		log.Fatalf("Error opening connection: %v", err)
 	}
 	defer dg.Close()
-	fmt.Println("Botが起動しました。終了するにはCTRL+Cを押してください。")
+	fmt.Println("Bot is now running. Press CTRL+C to exit.")
 
 	// イベントハンドラの登録
 	dg.AddHandler(voiceStateUpdate)
@@ -77,7 +77,6 @@ func main() {
 }
 
 // voiceStateUpdate：ボイスチャンネルの状態が更新されたときに呼ばれるイベント
-
 func voiceStateUpdate(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 	if vsu == nil {
 		log.Println("VoiceStateUpdate event is nil")
@@ -87,7 +86,7 @@ func voiceStateUpdate(s *discordgo.Session, vsu *discordgo.VoiceStateUpdate) {
 	userID := vsu.UserID
 
 	// チャンネルに参加した場合、現在の時間を記録
-	if vsu.ChannelID == voiceChannelID && vsu.BeforeUpdate == nil {
+	if vsu.ChannelID == voiceChannelID && vsu.BeforeUpdate == nil { // ボイスチャンネルに参加
 		userJoinTimes[userID] = time.Now()
 		joinTimeStr := userJoinTimes[userID].Format("2006-01-02 15:04:05")
 		log.Printf("User %s joined the voice channel at %s", userID, joinTimeStr)
@@ -132,7 +131,7 @@ func handleUserExit(s *discordgo.Session, userID string) {
 		// 既存のデータを取得
 		docSnap, err := docRef.Get(ctx)
 		if err != nil {
-			log.Printf("ドキュメントの取得中にエラーが発生しました: %v", err)
+			log.Printf("Error retrieving document: %v", err)
 			return
 		}
 
@@ -151,7 +150,7 @@ func handleUserExit(s *discordgo.Session, userID string) {
 				case float64:
 					totalStayingTime = int64(v)
 				default:
-					log.Printf("TotalStayingTimeの予期しない型: %T", val)
+					log.Printf("Unexpected type for TotalStayingTime: %T", val)
 				}
 			}
 			// WeeklyStayingTimeを取得
@@ -164,7 +163,7 @@ func handleUserExit(s *discordgo.Session, userID string) {
 				case float64:
 					weeklyStayingTime = int64(v)
 				default:
-					log.Printf("WeeklyStayingTimeの予期しない型: %T", val)
+					log.Printf("Unexpected type for WeeklyStayingTime: %T", val)
 				}
 			}
 		}
@@ -183,7 +182,7 @@ func handleUserExit(s *discordgo.Session, userID string) {
 			"WeeklyStayingTime": weeklyStayingTime,
 		})
 		if err != nil {
-			log.Printf("Firestoreへの書き込み中にエラーが発生しました: %v", err)
+			log.Printf("Error writing to Firestore: %v", err)
 		}
 
 		// ログに滞在時間を出力
