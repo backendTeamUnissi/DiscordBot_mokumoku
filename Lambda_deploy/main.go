@@ -27,14 +27,14 @@ func main() {
 		log.Fatalf("Firestoreクライアントの初期化に失敗しました: %v", err)
 	}
 
-	// Firestoreから全データを読み込む
-    ReadAllFromFirestore(ctx)
+	// FirestoreからWeeklyTimeフィールドのみを読み込む
+    ReadUserNameAndWeeklyStayingTime(ctx)
 }
 
-// Firestoreから全データを読み込む関数
-func ReadAllFromFirestore(ctx context.Context) {
-    // 読み込むコレクションを指定
-    docRefs := client.Collection("user_profiles").Documents(ctx)
+// FirestoreからWeeklyTimeフィールドのみを取得する関数
+func ReadUserNameAndWeeklyStayingTime(ctx context.Context) {
+    // "user_profiles"コレクションから"WeeklyTime"フィールドのみを選択して取得
+    docRefs := client.Collection("user_profiles").Select("UserName", "WeeklyStayingTime").Documents(ctx)
 
     // ドキュメントを反復処理して取得
     for {
