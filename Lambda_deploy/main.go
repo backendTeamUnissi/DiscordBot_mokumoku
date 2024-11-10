@@ -23,6 +23,9 @@ func main() {
 	// Firestoreクライアントの設定、初期化
 	ctx := context.Background()
 	client, err = firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile("./peachtech-mokumoku-91af9d3931c9.json"))
+    if err != nil {
+		log.Fatalf("Firestoreクライアントの初期化に失敗しました: %v", err)
+	}
 
 	// Firestoreから全データを読み込む
     ReadAllFromFirestore(ctx)
