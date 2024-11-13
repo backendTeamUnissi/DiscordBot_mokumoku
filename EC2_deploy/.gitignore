@@ -1,2 +1,41 @@
+# バイナリファイル
+/bin/
+/*.exe
+/*.exe~
+/*.dll
+/*.so
+/*.dylib
+
+# ビルド出力
+/build/
+/dist/
+
+# Goモジュール
+/vendor/
+
+# 環境変数ファイル
 .env
+
+# Firestore認証情報
 peachtech-mokumoku-91af9d3931c9.json
+
+# IDE設定ファイル
+.vscode/
+.idea/
+
+# ログファイル
+*.log
+
+# 一時ファイル
+*.tmp
+*.swp
+*.swo
+
+# OS生成ファイル
+.DS_Store
+Thumbs.db
+
+# その他の無視すべきファイルやディレクトリ
+*.bak
+*.old
+*.orig
