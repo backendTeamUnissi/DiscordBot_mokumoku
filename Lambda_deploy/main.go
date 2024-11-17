@@ -23,36 +23,58 @@ func main() {
 	// Firestoreクライアントの設定、初期化
 	ctx := context.Background()
 	client, err = firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile("./peachtech-mokumoku-91af9d3931c9.json"))
-    if err != nil {
+	if err != nil {
 		log.Fatalf("Firestoreクライアントの初期化に失敗しました: %v", err)
 	}
 
 	// FirestoreからWeeklyTimeフィールドのみを読み込む
-    ReadUserNameAndWeeklyStayingTime(ctx)
+	ReadUserNameAndWeeklyStayingTime(ctx)
 }
+
+type UserData struct {
+	UserName          string
+	WeeklyStayingTime int
+}
+
+var userDataList []UserData
 
 // FirestoreからWeeklyTimeフィールドのみを取得する関数
 func ReadUserNameAndWeeklyStayingTime(ctx context.Context) {
-    // "user_profiles"コレクションから"WeeklyTime"フィールドのみを選択して取得
-    docRefs := client.Collection("user_profiles").Select("UserName", "WeeklyStayingTime").Documents(ctx)
+	// "user_profiles"コレクションから"UserName"と"WeeklyStayingTime"フィールドを選択して取得
+	docRefs := client.Collection("user_profiles").Select("UserName", "WeeklyStayingTime").Documents(ctx)
 
-    // ドキュメントを反復処理して取得
-    for {
-        docSnap, err := docRefs.Next()
-        if err != nil {
-            // エラーが発生した場合は終了
-            if err == iterator.Done {
-                break
-            }
-            log.Printf("Firestoreからのデータ取得エラー: %v", err)
-            return
-        }
+	// ドキュメントを反復処理して取得
+	for {
+		docSnap, err := docRefs.Next()
+		if err != nil {
+			// エラー（もうデータない）が発生した場合は終了
+			if err == iterator.Done {
+				break
+			}
+			log.Printf("Firestoreからのデータ取得エラー: %v", err)
+			return
+		}
 
-  // ドキュメントのデータを取得し、コンソールに表示
-        data := docSnap.Data() // Data() でマップとして取得
-        if len(data) > 0 {
-            fmt.Printf("Firestoreから読み取ったデータ: %v\n", data)
+		// ドキュメントのデータを取得し、コンソールに表示
+		data := docSnap.Data() // Data() でマップとして取得
+		if len(data) > 0 {
+			// Firestoreから読み取ったデータを表示
+			fmt.Printf("Firestoreから読み取ったデータ: %v\n", data)
 
-        }
-    }
+			// UserData型にデータを格納
+			userData := UserData{
+				UserName:          data["UserName"].(string),
+				WeeklyStayingTime: int(data["WeeklyStayingTime"].(int64)), 
+			}
+
+			// ユーザーデータをスライスに追加
+			userDataList = append(userDataList, userData)
+		}
+	}
+
+	// スライスに格納された全ユーザーデータのデバッグ表示
+	fmt.Println("\nFirestoreから取得した全ユーザーデータ:")
+	for _, user := range userDataList {
+		fmt.Printf("UserName: %s, WeeklyStayingTime: %d\n", user.UserName, user.WeeklyStayingTime)
+	}
 }
