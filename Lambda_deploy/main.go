@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 
 	"cloud.google.com/go/firestore"
 	"github.com/joho/godotenv"
@@ -29,6 +30,9 @@ func main() {
 
 	// FirestoreからWeeklyTimeフィールドのみを読み込む
 	ReadUserNameAndWeeklyStayingTime(ctx)
+
+	// スライス内データをソートし、上位3名を表示する
+	SortTop3Users()
 }
 
 type UserData struct {
@@ -76,5 +80,19 @@ func ReadUserNameAndWeeklyStayingTime(ctx context.Context) {
 	fmt.Println("\nFirestoreから取得した全ユーザーデータ:")
 	for _, user := range userDataList {
 		fmt.Printf("UserName: %s, WeeklyStayingTime: %d\n", user.UserName, user.WeeklyStayingTime)
+	}
+}
+
+    // スライスをソートし、上位3名を表示する関数
+func SortTop3Users() {
+	// WeeklyStayingTimeで降順にソート
+	sort.Slice(userDataList, func(i, j int) bool {
+		return userDataList[i].WeeklyStayingTime > userDataList[j].WeeklyStayingTime
+	})
+
+	// 上位3名を表示
+	fmt.Println("\n上位3名のユーザー:")
+	for i := 0; i < 3 && i < len(userDataList); i++ {
+		fmt.Printf("%d位: %s - %d分\n", i+1, userDataList[i].UserName, userDataList[i].WeeklyStayingTime)
 	}
 }
