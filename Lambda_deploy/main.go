@@ -35,6 +35,9 @@ func main() {
 		log.Fatalf("Firestoreクライアントの初期化に失敗しました: %v", err)
 	}
 
+	// Firestoreクライアントの使用後、自動的にクローズ
+	defer client.Close()
+
 	// FirestoreからWeeklyTimeフィールドのみを読み込む
 	ReadUserNameAndWeeklyStayingTime(ctx)
 
