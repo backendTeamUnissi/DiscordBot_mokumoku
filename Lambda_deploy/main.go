@@ -14,6 +14,13 @@ import (
 
 var client *firestore.Client
 
+type UserData struct {
+	UserName          string
+	WeeklyStayingTime int
+}
+
+var userDataList []UserData
+
 func main() {
 	// .envファイルから環境変数を読み込む
 	err := godotenv.Load()
@@ -34,13 +41,6 @@ func main() {
 	// スライス内データをソートし、上位3名を表示する
 	SortTop3Users()
 }
-
-type UserData struct {
-	UserName          string
-	WeeklyStayingTime int
-}
-
-var userDataList []UserData
 
 // FirestoreからWeeklyTimeフィールドのみを取得する関数
 func ReadUserNameAndWeeklyStayingTime(ctx context.Context) {
