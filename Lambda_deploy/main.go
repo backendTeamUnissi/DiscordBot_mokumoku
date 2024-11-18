@@ -4,15 +4,18 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 	"sort"
 
 	"cloud.google.com/go/firestore"
+	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
 var client *firestore.Client
+
 
 type UserData struct {
 	UserName          string
@@ -28,13 +31,18 @@ func main() {
 		log.Fatalf(".envファイルの読み込みに失敗しました: %v", err)
 	}
 
+	// Discordトークンの取得
+	discordToken := os.Getenv("DISCORDTOKEN")
+	if discordToken == "" {
+		log.Fatal("環境変数DISCORDTOKENが設定されていません")
+	}
+
 	// Firestoreクライアントの設定、初期化
 	ctx := context.Background()
 	client, err = firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile("./peachtech-mokumoku-91af9d3931c9.json"))
 	if err != nil {
 		log.Fatalf("Firestoreクライアントの初期化に失敗しました: %v", err)
 	}
-
 	// Firestoreクライアントの使用後、自動的にクローズ
 	defer client.Close()
 
@@ -43,6 +51,24 @@ func main() {
 
 	// スライス内データをソートし、上位3名を表示する
 	SortTop3Users()
+
+	// Discord APIに接続
+	dg, err := discordgo.New("Bot " + discordToken)
+	if err != nil {
+		log.Fatalf("Discordセッションの作成に失敗しました: %v", err)
+	}
+    // Discordセッションの使用後、自動的にクローズ
+	defer dg.Close()
+
+	// Botを起動し、Discordサーバーに接続
+	err = dg.Open()
+	if err != nil {
+		log.Fatalf("Discordサーバーへの接続に失敗しました: %v", err)
+	}
+
+	// 起動メッセージを表示
+	fmt.Println("Bot is now running. Press CTRL+C to exit.")
+
 }
 
 // FirestoreからWeeklyTimeフィールドのみを取得する関数
