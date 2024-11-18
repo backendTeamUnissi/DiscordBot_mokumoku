@@ -1,29 +1,39 @@
+// config.go
 package config
 
 import (
-	"log"
-	"os"
+    "fmt"
+    "log"
+    "os"
 
-	"github.com/joho/godotenv"
+    "github.com/joho/godotenv"
 )
 
 type Config struct {
-	DiscordToken         string
-	DiscordTextChannelID string
-	DiscordVoiceChannelID string
-	FirestoreCredentials string
+    DiscordToken          string
+    DiscordTextChannelID  string
+    DiscordVoiceChannelID string
+    FirestoreCredentials  string
 }
 
 func LoadConfig() (*Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		log.Println("No .env file found, reading environment variables")
-	}
+    // .env ファイルの読み込み
+    err := godotenv.Load()
+    if err != nil {
+        log.Println("No .env file found, reading environment variables")
+    }
 
-	return &Config{
-		DiscordToken:         os.Getenv("DISCORDTOKEN"),
-		DiscordTextChannelID: os.Getenv("DISCORDTEXTCHANNELID"),
-		DiscordVoiceChannelID: os.Getenv("DISCORDVOICECHANNELID"),
-		FirestoreCredentials: os.Getenv("FIRESTORE_CREDENTIALS_FILE"), // .envに追加
-	}, nil
+    cfg := &Config{
+        DiscordToken:          os.Getenv("DISCORDTOKEN"),
+        DiscordTextChannelID:  os.Getenv("DISCORDTEXTCHANNELID"),
+        DiscordVoiceChannelID: os.Getenv("DISCORDVOICECHANNELID"),
+        FirestoreCredentials:  os.Getenv("FIRESTORE_CREDENTIALS_FILE"),
+    }
+
+    // 環境変数のバリデーション
+    if cfg.DiscordToken == "" || cfg.DiscordTextChannelID == "" || cfg.DiscordVoiceChannelID == "" || cfg.FirestoreCredentials == "" {
+        return nil, fmt.Errorf("one or more required environment variables are missing")
+    }
+
+    return cfg, nil
 }
