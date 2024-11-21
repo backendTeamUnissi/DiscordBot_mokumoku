@@ -98,6 +98,10 @@ func main() {
 	if err != nil {
 		log.Printf("Discordへのメッセージ送信に失敗しました: %v", err)
 	}
+
+	// WeeklyStayingTimeをリセットする
+	ResetWeeklyStayingTime(ctx)
+	
 }
 
 // FirestoreからWeeklyTimeフィールドのみを取得する関数
@@ -163,4 +167,38 @@ func buildTopUsersMessage() string {
 		message.WriteString(fmt.Sprintf("%d位: %s - %s\n", i+1, userDataList[i].UserName, formatDuration(userDataList[i].WeeklyStayingTime)))
 	}
 	return message.String()
+}
+
+// Firestore内の全ユーザーのWeeklyStayingTimeを0にリセットする関数
+func ResetWeeklyStayingTime(ctx context.Context) {
+	// "user_profiles"コレクションから全ドキュメントを取得
+	docRefs := client.Collection("user_profiles").Documents(ctx)
+
+	// 取得したドキュメントを1つずつ処理（ループ）
+	for {
+		docSnap, err := docRefs.Next()
+		if err != nil {
+			// 全てのデータを処理し終えた場合、ループを終了
+			if err == iterator.Done {
+				break
+			}
+			log.Printf("Firestoreからのデータ取得エラー: %v", err)
+			return
+		}
+
+		// ドキュメントIDを取得
+		docID := docSnap.Ref.ID
+
+		// WeeklyStayingTimeフィールドを0に書き換える
+		//  書き換えた値をFirestoreに保存する
+		_, err = client.Collection("user_profiles").Doc(docID).Update(ctx, []firestore.Update{
+			{Path: "WeeklyStayingTime", Value: 0},
+		})
+		if err != nil {
+			log.Printf("WeeklyStayingTimeのリセットに失敗しました (ID: %s): %v", docID, err)
+		} else {
+			log.Printf("WeeklyStayingTimeをリセットしました (ID: %s)", docID)
+		}
+	}
+	log.Println("全ユーザーのWeeklyStayingTimeをリセットしました")
 }
