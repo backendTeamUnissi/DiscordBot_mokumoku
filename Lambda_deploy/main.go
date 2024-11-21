@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	"sort"
-	"strings"
+	// "strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -91,10 +91,10 @@ func main() {
 	}
 
 	// 上位3名の情報をメッセージとして組み立てて送信
-	message := buildTopUsersMessage()
+	message := BuildTopUsersEmbed()
 
 	// Discordチャンネルへのメッセージ送信
-	_, err = dg.ChannelMessageSend(textChannelID, message)
+	_, err = dg.ChannelMessageSendEmbed(textChannelID, message)
 	if err != nil {
 		log.Printf("Discordへのメッセージ送信に失敗しました: %v", err)
 	}
@@ -160,13 +160,27 @@ func SortTopUsers() {
 }
 
 // 上位3名の情報をメッセージとして構築
-func buildTopUsersMessage() string {
-	var message strings.Builder
-	message.WriteString("上位3名のユーザー:\n")
-	for i := 0; i < 3 && i < len(userDataList); i++ {
-		message.WriteString(fmt.Sprintf("%d位: %s - %s\n", i+1, userDataList[i].UserName, formatDuration(userDataList[i].WeeklyStayingTime)))
+func BuildTopUsersEmbed() *discordgo.MessageEmbed {
+	// Embedの基本情報を設定
+	embed := &discordgo.MessageEmbed{
+		Title:       "🔥今週の滞在時間トップ3🔥",
+		Description: "今週のもくもくを頑張ったユーザーはこちら！",
+		Color:       0xff0000, // グリーン (必要に応じて変更可能)
+		Fields:      []*discordgo.MessageEmbedField{},
 	}
-	return message.String()
+
+	// 上位3名の情報をEmbedに追加
+	for i := 0; i < 3 && i < len(userDataList); i++ {
+		fieldName := fmt.Sprintf("%d位: %s", i+1, userDataList[i].UserName)
+		fieldValue := fmt.Sprintf("滞在時間: %s", formatDuration(userDataList[i].WeeklyStayingTime))
+		embed.Fields = append(embed.Fields, &discordgo.MessageEmbedField{
+			Name:   fieldName,
+			Value:  fieldValue,
+			Inline: false, // 必要に応じてtrueに変更
+		})
+	}
+
+	return embed
 }
 
 // Firestore内の全ユーザーのWeeklyStayingTimeを0にリセットする関数
