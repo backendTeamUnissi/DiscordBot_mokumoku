@@ -14,6 +14,7 @@ import (
 	"github.com/joho/godotenv"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
 type UserData struct {
@@ -58,6 +59,11 @@ func formatDuration(seconds int) string {
 }
 
 func main() {
+	lambda.Start(handler)
+	// handler()
+}
+
+func handler() {
 	//環境変数の読み込み
 	loadEnv()
 
