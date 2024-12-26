@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/firestore"
+	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/bwmarrin/discordgo"
 	"github.com/joho/godotenv"
 	"google.golang.org/api/iterator"
@@ -87,7 +88,7 @@ func formatDuration(seconds int) string {
 
 func main() {
 	printMode()
-	// lambda.Start(handler) 手動でコードを実行中
+	lambda.Start(handler)
 	handler()
 }
 
@@ -128,12 +129,59 @@ func handler() {
 	}
 
 	// 上位3名の情報をEmbed/通常のメッセージ形式に組み立てて送信
-	sendEmbedMessage(dg, textChannelID, userDataList)
-	sendNormalMessage(dg, textChannelID, userDataList)
+	sendMessages(dg, textChannelID)
 
 	// WeeklyStayingTimeをリセットする
 	ResetWeeklyStayingTime(ctx)
 	
+}
+
+func sendMessages(s *discordgo.Session, channelID string) {
+	sendEmbedMessage(s, channelID, userDataList)
+	sendNormalMessage(s, channelID, userDataList)
+}
+
+// Embedメッセージを送信する関数
+func sendEmbedMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
+	// Embedメッセージを作成
+	embed := &discordgo.MessageEmbed{
+		Title:       "🔥今週の滞在時間トップ3🔥",
+		Description: "今週のもくもくを頑張ったユーザーはこちら！\n", // ここで改行を入れる
+		Color:       0x00ff00,
+	}
+
+	// 上位3名のユーザー情報をEmbedのDescriptionに追加
+	for i := 0; i < 3 && i < len(userDataList); i++ {
+		// ユーザーIDと滞在時間を取得
+		userID := userDataList[i].UserID
+		stayingTime := formatDuration(userDataList[i].WeeklyStayingTime)
+		// ユーザー情報（順位、ユーザーID、滞在時間）をEmbedのDescriptionに追加
+		embed.Description += fmt.Sprintf("%d位: <@%s>\n滞在時間: %s\n", i+1, userID, stayingTime)
+	}
+
+	// 環境モードに応じたDiscordチャンネルへEmbedメッセージを送信
+	_, err := s.ChannelMessageSendEmbed(channelID, embed)
+	if err != nil {
+		fmt.Println("Error sending embed message:", err)
+		return
+	}
+}
+
+// 通常のテキストメッセージを送信する関数
+func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
+	message := ""
+	for i := 0; i < 3 && i < len(userDataList); i++ {
+		// ユーザーIDを取得し、メンション形式でメッセージを組み立て
+		userID := userDataList[i].UserID
+		message += fmt.Sprintf("<@%s> さんがトップ %d にランクイン！\n", userID, i+1)
+	}
+
+	// 環境モードに応じたDiscordチャンネルへテキストメッセージを送信
+	_, err := s.ChannelMessageSend(channelID, message)
+	if err != nil {
+		fmt.Println("Error sending normal message:", err)
+		return
+	}
 }
 
 // Firestoreからユーザーデータを取得する関数
@@ -192,79 +240,19 @@ func SortTopUsers() {
 	}
 }
 
-// Embedメッセージを送信する関数
-func sendEmbedMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
-	// Embedメッセージを作成
-	embed := &discordgo.MessageEmbed{
-		Title:       "🔥今週の滞在時間トップ3🔥",
-		Description: "今週のもくもくを頑張ったユーザーはこちら！\n", // ここで改行を入れる
-		Color:       0x00ff00,
-	}
-
-	// 上位3名のユーザー情報をEmbedのDescriptionに追加
-	for i := 0; i < 3 && i < len(userDataList); i++ {
-		// ユーザーIDと滞在時間を取得
-		userID := userDataList[i].UserID
-		stayingTime := formatDuration(userDataList[i].WeeklyStayingTime)
-		// ユーザー情報（順位、ユーザーID、滞在時間）をEmbedのDescriptionに追加
-		embed.Description += fmt.Sprintf("%d位: <@%s>\n滞在時間: %s\n", i+1, userID, stayingTime)
-	}
-
-	// 環境モードに応じたDiscordチャンネルへEmbedメッセージを送信
-	_, err := s.ChannelMessageSendEmbed(channelID, embed)
-	if err != nil {
-		fmt.Println("Error sending embed message:", err)
-		return
-	}
-}
-
-// 通常のテキストメッセージを送信する関数
-func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
-	message := ""
-	for i := 0; i < 3 && i < len(userDataList); i++ {
-		// ユーザーIDを取得し、メンション形式でメッセージを組み立て
-		userID := userDataList[i].UserID
-		message += fmt.Sprintf("<@%s> さんがトップ %d にランクイン！\n", userID, i+1)
-	}
-
-	// 環境モードに応じたDiscordチャンネルへテキストメッセージを送信
-	_, err := s.ChannelMessageSend(channelID, message)
-	if err != nil {
-		fmt.Println("Error sending normal message:", err)
-		return
-	}
-}
-
-// Firestore内の全ユーザーのWeeklyStayingTimeを0にリセットする関数
+// すでに取得してあるユーザーデータのスライスを用い、WeeklyStayingTimeをリセットする関数
 func ResetWeeklyStayingTime(ctx context.Context) {
-	// 指定したコレクションの全ドキュメントを取得
-	docRefs := client.Collection(collectionName).Documents(ctx)
-
-	// 取得したドキュメントを1つずつ処理（ループ）
-	for {
-		docSnap, err := docRefs.Next()
-		if err != nil {
-			// データの終わりを検知し、ループを終了
-			if err == iterator.Done {
-				break
-			}
-			log.Printf("Firestoreからのデータ取得エラー: %v", err)
-			return
-		}
-
-		// ドキュメントIDを取得
-		docID := docSnap.Ref.ID
-
-		// WeeklyStayingTimeフィールドを0に書き換える
-		//  書き換えた値をFirestoreに保存する
-		_, err = client.Collection(collectionName).Doc(docID).Update(ctx, []firestore.Update{
-			{Path: "WeeklyStayingTime", Value: 0},
+	// 各ユーザーのWeeklyStayingTimeをリセット
+	for _, userData := range userDataList {
+		_, err := client.Collection(collectionName).Doc(userData.UserID).Update(ctx, []firestore.Update{
+			{Path: "WeeklyStayingTime", Value: 0}, // WeeklyStayingTimeを0にリセット
 		})
 		if err != nil {
-			log.Printf("WeeklyStayingTimeのリセットに失敗しました (ID: %s): %v", docID, err)
+			log.Printf("ユーザー %s のWeeklyStayingTimeのリセットに失敗しました: %v", userData.UserID, err)
 		} else {
-			log.Printf("WeeklyStayingTimeをリセットしました (ID: %s)", docID)
+			log.Printf("ユーザー %s のWeeklyStayingTimeをリセットしました", userData.UserID)
 		}
 	}
-	log.Println("全ユーザーのWeeklyStayingTimeをリセットしました")
+
+	fmt.Println("\nWeeklyStayingTimeがリセットされました。")
 }
