@@ -111,9 +111,6 @@ func handler() {
 	// Firestoreからユーザーデータを取得する
 	ReadUserProfiles(ctx)
 
-	// スライス内データをソートし、上位3名を表示する
-	SortTopUsers()
-
 	// Discord APIに接続
 	dg, err := discordgo.New("Bot " + discordToken)
 	if err != nil {
@@ -218,26 +215,16 @@ func ReadUserProfiles(ctx context.Context) {
 			userDataList = append(userDataList, userData)
 		}
 	}
-
 	// スライスに格納された全ユーザーデータのデバッグ表示
 	fmt.Println("\nFirestoreから取得した全ユーザーデータ:")
 	for _, user := range userDataList {
 		fmt.Printf("UserName: %s, WeeklyStayingTime: %d\n", user.UserName, user.WeeklyStayingTime)
 	}
-}
 
-    // スライスをソートし、上位3名を表示する関数
-func SortTopUsers() {
-	// WeeklyStayingTimeで降順にソート
-	sort.Slice(userDataList, func(i, j int) bool {
+        // userDataListの降順ソート
+		sort.Slice(userDataList, func(i, j int) bool {
 		return userDataList[i].WeeklyStayingTime > userDataList[j].WeeklyStayingTime
 	})
-
-	// 上位3名を表示
-	fmt.Println("\n上位3名のユーザー:")
-	for i := 0; i < 3 && i < len(userDataList); i++ {
-		fmt.Printf("%d位: %s - %d分\n", i+1, userDataList[i].UserName, userDataList[i].WeeklyStayingTime)
-	}
 }
 
 // すでに取得してあるユーザーデータのスライスを用い、WeeklyStayingTimeをリセットする関数
