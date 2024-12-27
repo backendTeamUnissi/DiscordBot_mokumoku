@@ -33,15 +33,20 @@ var client *firestore.Client
 var err error
 var collectionName string
 
-func loadEnv() {
-    // 環境モードに応じた.envファイルを読み込む
-    var envFile string
+// DevModeの設定を集約する関数
+func setupDevMode() {
+    // 環境モードに応じた設定を行う
+	var envFile string
     if DevMode {
         envFile = ".env.dev"  // 開発環境用
+		collectionName = "test_profiles" // 開発用コレクション
+		fmt.Println("現在、開発モードで実行中です。")
     } else {
         envFile = ".env.prod" // 本番環境用
+		collectionName = "user_profiles" // 本番用コレクション
+		fmt.Println("現在、本番モードで実行中です。")
     }
-
+    // 環境変数をロード
     err := godotenv.Load(envFile)
     if err != nil {
         log.Fatalf("%sの読み込みに失敗しました: %v", envFile, err)
@@ -60,23 +65,6 @@ func loadEnv() {
     }
 }
 
-// 環境モードに応じたコレクション名を設定する関数
-func setCollectionName() {
-	if DevMode {
-		collectionName = "test_profiles" // 開発用コレクション
-	} else {
-		collectionName = "user_profiles" // 本番用コレクション
-	}
-}
-
-func printMode() {
-    if DevMode {
-        fmt.Println("現在、開発モードで実行中です。")
-    } else {
-        fmt.Println("現在、本番モードで実行中です。")
-    }
-}
-
 // 秒を「○時間○分○秒」形式に変換する関数
 func formatDuration(seconds int) string {
 	duration := time.Duration(seconds) * time.Second
@@ -87,14 +75,13 @@ func formatDuration(seconds int) string {
 }
 
 func main() {
-	printMode()
 	lambda.Start(handler)
 	handler()
 }
 
 func handler() {
-	//環境変数の読み込み
-	loadEnv()
+	// DevModeの設定を読み込む
+	setupDevMode()
 
 	// Firestoreクライアントの設定、初期化
 	ctx := context.Background()
@@ -104,9 +91,6 @@ func handler() {
 	}
 	// リソースの解放
 	defer client.Close()
-
-	// 環境モードに応じたコレクション名の選択
-	setCollectionName()
 
 	// Firestoreからユーザーデータを取得する
 	ReadUserProfiles(ctx)
