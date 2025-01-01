@@ -118,8 +118,8 @@ func handler() {
 }
 
 func sendMessages(s *discordgo.Session, channelID string) {
-	sendEmbedMessage(s, channelID, userDataList)
 	sendNormalMessage(s, channelID, userDataList)
+	sendEmbedMessage(s, channelID, userDataList)
 }
 
 // Embedメッセージを送信する関数
@@ -148,16 +148,17 @@ func sendEmbedMessage(s *discordgo.Session, channelID string, userDataList []Use
 	}
 }
 
+
 // 通常のテキストメッセージを送信する関数
 func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
 	message := ""
+	// 上位3名のユーザーをメンション形式で、1行で組み立て
 	for i := 0; i < 3 && i < len(userDataList); i++ {
-		// ユーザーIDを取得し、メンション形式でメッセージを組み立て
 		userID := userDataList[i].UserID
-		message += fmt.Sprintf("<@%s> さんがトップ %d にランクイン！\n", userID, i+1)
+		message += fmt.Sprintf("<@%s> ", userID)
 	}
 
-	// 環境モードに応じたDiscordチャンネルへテキストメッセージを送信
+	// メンション付きのテキストメッセージを送信
 	_, err := s.ChannelMessageSend(channelID, message)
 	if err != nil {
 		fmt.Println("Error sending normal message:", err)
