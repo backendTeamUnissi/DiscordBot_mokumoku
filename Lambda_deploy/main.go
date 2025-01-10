@@ -100,14 +100,15 @@ func handler() {
 	if err != nil {
 		log.Fatalf("Discordセッションの作成に失敗しました: %v", err)
 	}
-    // Discordセッションの使用後、自動的にクローズ
-	defer dg.Close()
 
 	// Botを起動し、Discordサーバーに接続
 	err = dg.Open()
 	if err != nil {
 		log.Fatalf("Discordサーバーへの接続に失敗しました: %v", err)
 	}
+
+	// Discordセッションの使用後、自動的にクローズ
+	defer dg.Close()
 
 	// 上位3名の情報をEmbed/通常のメッセージ形式に組み立てて送信
 	sendMessages(dg, textChannelID)
