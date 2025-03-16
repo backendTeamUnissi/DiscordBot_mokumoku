@@ -132,13 +132,15 @@ func sendEmbedMessage(s *discordgo.Session, channelID string, userDataList []Use
 		Color:       0x00ff00,
 	}
 
-	// 上位3名のユーザー情報をEmbedのDescriptionに追加
-	for i := 0; i < 3 && i < len(userDataList); i++ {
-		// ユーザーIDと滞在時間を取得
-		userID := userDataList[i].UserID
-		stayingTime := formatDuration(userDataList[i].WeeklyStayingTime)
-		// ユーザー情報（順位、ユーザーID、滞在時間）をEmbedのDescriptionに追加
-		embed.Description += fmt.Sprintf("%d位: <@%s>\n滞在時間: %s\n", i+1, userID, stayingTime)
+	// 上位3名のユーザー情報を追加
+	for i := 0; i < 3; i++ {
+		if i < len(userDataList) && userDataList[i].WeeklyStayingTime > 0 {
+			userID := userDataList[i].UserID
+			stayingTime := formatDuration(userDataList[i].WeeklyStayingTime)
+			embed.Description += fmt.Sprintf("%d位: <@%s>\n滞在時間: %s\n", i+1, userID, stayingTime)
+		} else {
+			embed.Description += fmt.Sprintf("%d位: ---\n滞在時間: ---\n", i+1)
+		}
 	}
 
 	// 環境モードに応じたDiscordチャンネルへEmbedメッセージを送信
@@ -155,8 +157,14 @@ func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []Us
 	message := ""
 	// 上位3名のユーザーをメンション形式で、1行で組み立て
 	for i := 0; i < 3 && i < len(userDataList); i++ {
-		userID := userDataList[i].UserID
-		message += fmt.Sprintf("<@%s> ", userID)
+		// 滞在時間が 0 以下のユーザーはメンションしない
+		if userDataList[i].WeeklyStayingTime > 0 {
+			message += fmt.Sprintf("<@%s> ", userDataList[i].UserID)
+		}
+	}
+	// メッセージが空なら何も送らない
+	if message == "" {
+		return
 	}
 
 	// メンション付きのテキストメッセージを送信
