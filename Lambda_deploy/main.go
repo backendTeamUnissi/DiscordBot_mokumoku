@@ -75,8 +75,8 @@ func formatDuration(seconds int) string {
 }
 
 func main() {
-	//lambda.Start(handler)
-	handler()
+	lambda.Start(handler)
+	// handler()
 }
 
 func handler() {
