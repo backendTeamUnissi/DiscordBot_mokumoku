@@ -14,10 +14,11 @@ import (
 	"github.com/joho/godotenv"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
+    "github.com/aws/aws-lambda-go/lambda"
 )
 
 // DevModeを定義（テスト時は開発モードを有効にする）
-const DevMode = true
+const DevMode = false
 
 type UserData struct {
 	UserID            string
