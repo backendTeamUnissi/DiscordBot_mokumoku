@@ -70,23 +70,5 @@ func handler() {
 	SendMessages(dg, TextChannelID, userDataList)
 
 	// WeeklyStayingTimeをリセットする
-	ResetWeeklyStayingTime(ctx)
-	
-}
-
-// すでに取得してあるユーザーデータのスライスを用い、WeeklyStayingTimeをリセットする関数
-func ResetWeeklyStayingTime(ctx context.Context) {
-	// 各ユーザーのWeeklyStayingTimeをリセット
-	for _, userData := range userDataList {
-		_, err := client.Collection(CollectionName).Doc(userData.UserID).Update(ctx, []firestore.Update{
-			{Path: "WeeklyStayingTime", Value: 0}, // WeeklyStayingTimeを0にリセット
-		})
-		if err != nil {
-			log.Printf("ユーザー %s のWeeklyStayingTimeのリセットに失敗しました: %v", userData.UserID, err)
-		} else {
-			log.Printf("ユーザー %s のWeeklyStayingTimeをリセットしました", userData.UserID)
-		}
-	}
-
-	fmt.Println("\nWeeklyStayingTimeがリセットされました。")
+	ResetWeeklyStayingTime(ctx, client, userDataList)
 }
