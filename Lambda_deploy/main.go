@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"sort"
-	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
@@ -72,97 +71,11 @@ func handler() {
 	defer dg.Close()
 
 	// 上位3名の情報をEmbed/通常のメッセージ形式に組み立てて送信
-	sendMessages(dg, TextChannelID)
+	SendMessages(dg, TextChannelID, userDataList)
 
 	// WeeklyStayingTimeをリセットする
 	ResetWeeklyStayingTime(ctx)
 	
-}
-
-func sendMessages(s *discordgo.Session, channelID string) {
-	sendNormalMessage(s, channelID, userDataList)
-	sendEmbedMessage(s, channelID, userDataList)
-}
-
-// Embedメッセージを送信する関数
-func sendEmbedMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
-	// 滞在時間が0より大きいユーザーを抽出し、validUsersに保存
-	validUsers := []UserData{}
-	for _, user := range userDataList {
-		if user.WeeklyStayingTime > 0 {
-			validUsers = append(validUsers, user)
-		}
-	}
-
-	// validUsersより、滞在者数を取得
-	rankCount := len(validUsers)
-
-	// 滞在者数より、Embedのタイトルを動的に設定
-	title := fmt.Sprintf("🔥今週の滞在時間トップ%d🔥", rankCount)
-
-	var descriptionBuilder strings.Builder
-	if rankCount == 0 {
-		title = "今週の滞在者なし😢"
-		descriptionBuilder.WriteString("今週はもくもくしていませんでした…\n")
-	} else {
-		descriptionBuilder.WriteString("今週のもくもくを頑張ったユーザーはこちら！\n") // ← 最初に1回だけ改行
-	}
-
-	// 上位のユーザー情報を追加（最大3人）
-for i := 0; i < 3; i++ {
-    if i < rankCount {
-        userID := validUsers[i].UserID
-        stayingTime := formatDuration(validUsers[i].WeeklyStayingTime)
-
-        // 明確に改行を入れる
-        if i == 0 {
-            descriptionBuilder.WriteString("\n")
-        }
-
-        // ユーザー情報を追加（各順位の後に改行）
-        descriptionBuilder.WriteString(fmt.Sprintf("**%d位:** <@%s>\n**滞在時間:** %s\n", i+1, userID, stayingTime))
-    } else {
-        // 滞在者数が3以下の場合もフォーマットの形を統一
-        descriptionBuilder.WriteString(fmt.Sprintf("**%d位:** ---\n**滞在時間:** ---\n", i+1))
-    }
-}
-
-	// Embedメッセージを作成
-	embed := &discordgo.MessageEmbed{
-		Title:       title,
-		Description: descriptionBuilder.String(),
-		Color:       0x00ff00,
-	}
-
-	// DiscordチャンネルへEmbedメッセージを送信
-	_, err := s.ChannelMessageSendEmbed(channelID, embed)
-	if err != nil {
-		fmt.Println("Error sending embed message:", err)
-		return
-	}
-}
-
-// 通常のテキストメッセージを送信する関数
-func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
-	message := ""
-	// 上位3名のユーザーをメンション形式で、1行で組み立て
-	for i := 0; i < 3 && i < len(userDataList); i++ {
-		// 滞在時間が 0 以下のユーザーはメンションしない
-		if userDataList[i].WeeklyStayingTime > 0 {
-			message += fmt.Sprintf("<@%s> ", userDataList[i].UserID)
-		}
-	}
-	// メッセージが空なら何も送らない
-	if message == "" {
-		return
-	}
-
-	// メンション付きのテキストメッセージを送信
-	_, err := s.ChannelMessageSend(channelID, message)
-	if err != nil {
-		fmt.Println("Error sending normal message:", err)
-		return
-	}
 }
 
 // Firestoreからユーザーデータを取得する関数
