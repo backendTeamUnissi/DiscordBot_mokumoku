@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
-	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
 )
 
@@ -21,9 +19,7 @@ type UserData struct {
 
 // グローバル変数の宣言！（初期化はmain関数内で行う）
 var userDataList []UserData
-var client *firestore.Client
 var err error
-
 
 // 秒を「○時間○分○秒」形式に変換する関数
 func formatDuration(seconds int) string {
@@ -53,7 +49,7 @@ func handler() {
 	defer client.Close()
 
 	// Firestoreからユーザーデータを取得する
-	ReadUserProfiles(ctx)
+	ReadUserProfiles(ctx, client)
 
 	// Discord APIに接続
 	dg, err := discordgo.New("Bot " + DiscordToken)
@@ -76,52 +72,6 @@ func handler() {
 	// WeeklyStayingTimeをリセットする
 	ResetWeeklyStayingTime(ctx)
 	
-}
-
-// Firestoreからユーザーデータを取得する関数
-func ReadUserProfiles(ctx context.Context) {
-	// 指定したコレクションから"UserID","UserName","WeeklyStayingTime"フィールドを取得
-	docRefs := client.Collection(CollectionName).Select("UserID", "UserName", "WeeklyStayingTime").Documents(ctx)
-
-	// ドキュメントを反復処理して取得
-	for {
-		docSnap, err := docRefs.Next()
-		if err != nil {
-			// データの終わりを検知し、ループを終了
-			if err == iterator.Done {
-				break
-			}
-			log.Printf("Firestoreからのデータ取得エラー: %v", err)
-			return
-		}
-
-		// 取得したフィールドをマップ形式で取得し、構造体に変換してスライスに保存
-		data := docSnap.Data() // Data() でマップとして取得
-		if len(data) > 0 {
-			// Firestoreから読み取ったデータを表示
-			fmt.Printf("Firestoreから読み取ったデータ: %v\n", data)
-
-			// UserData型にデータを格納
-			userData := UserData{
-				UserID:            data["UserID"].(string), 
-				UserName:          data["UserName"].(string),
-				WeeklyStayingTime: int(data["WeeklyStayingTime"].(int64)), 
-			}
-
-			// ユーザーデータをスライスに追加
-			userDataList = append(userDataList, userData)
-		}
-	}
-	// スライスに格納された全ユーザーデータのデバッグ表示
-	fmt.Println("\nFirestoreから取得した全ユーザーデータ:")
-	for _, user := range userDataList {
-		fmt.Printf("UserName: %s, WeeklyStayingTime: %d\n", user.UserName, user.WeeklyStayingTime)
-	}
-
-        // userDataListの降順ソート
-		sort.Slice(userDataList, func(i, j int) bool {
-		return userDataList[i].WeeklyStayingTime > userDataList[j].WeeklyStayingTime
-	})
 }
 
 // すでに取得してあるユーザーデータのスライスを用い、WeeklyStayingTimeをリセットする関数
