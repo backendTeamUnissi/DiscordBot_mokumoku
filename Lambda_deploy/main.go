@@ -4,21 +4,15 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
-	"github.com/joho/godotenv"
 	"google.golang.org/api/iterator"
 	"google.golang.org/api/option"
-    "github.com/aws/aws-lambda-go/lambda"
 )
-
-// DevModeを定義（テスト時は開発モードを有効にする）
-const DevMode = false
 
 type UserData struct {
 	UserID            string
@@ -27,44 +21,10 @@ type UserData struct {
 }
 
 // グローバル変数の宣言！（初期化はmain関数内で行う）
-var discordToken string
-var textChannelID string
 var userDataList []UserData
 var client *firestore.Client
 var err error
-var collectionName string
 
-// DevModeの設定を集約する関数
-func setupDevMode() {
-    // 環境モードに応じた設定を行う
-	var envFile string
-    if DevMode {
-        envFile = ".env.dev"  // 開発環境用
-		collectionName = "test_profiles" // 開発用コレクション
-		fmt.Println("現在、開発モードで実行中です。")
-    } else {
-        envFile = ".env.prod" // 本番環境用
-		collectionName = "user_profiles" // 本番用コレクション
-		fmt.Println("現在、本番モードで実行中です。")
-    }
-    // 環境変数をロード
-    err := godotenv.Load(envFile)
-    if err != nil {
-        log.Fatalf("%sの読み込みに失敗しました: %v", envFile, err)
-    }
-
-    // Discordトークンの取得
-    discordToken = os.Getenv("DISCORDTOKEN")
-    if discordToken == "" {
-        log.Fatal("環境変数DISCORDTOKENが設定されていません")
-    }
-
-    // 環境モードに応じたメッセージ送信先のチャンネルID指定
-    textChannelID = os.Getenv("DISCORDTEXTCHANNELID")
-    if textChannelID == "" {
-        log.Fatal("環境変数DISCORDTEXTCHANNELIDが設定されていません")
-    }
-}
 
 // 秒を「○時間○分○秒」形式に変換する関数
 func formatDuration(seconds int) string {
@@ -76,13 +36,13 @@ func formatDuration(seconds int) string {
 }
 
 func main() {
-	lambda.Start(handler)
-	// handler()
+	// lambda.Start(handler)
+	handler()
 }
 
 func handler() {
 	// DevModeの設定を読み込む
-	setupDevMode()
+	SetupDevMode()
 
 	// Firestoreクライアントの設定、初期化
 	ctx := context.Background()
@@ -97,7 +57,7 @@ func handler() {
 	ReadUserProfiles(ctx)
 
 	// Discord APIに接続
-	dg, err := discordgo.New("Bot " + discordToken)
+	dg, err := discordgo.New("Bot " + DiscordToken)
 	if err != nil {
 		log.Fatalf("Discordセッションの作成に失敗しました: %v", err)
 	}
@@ -112,7 +72,7 @@ func handler() {
 	defer dg.Close()
 
 	// 上位3名の情報をEmbed/通常のメッセージ形式に組み立てて送信
-	sendMessages(dg, textChannelID)
+	sendMessages(dg, TextChannelID)
 
 	// WeeklyStayingTimeをリセットする
 	ResetWeeklyStayingTime(ctx)
@@ -208,7 +168,7 @@ func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []Us
 // Firestoreからユーザーデータを取得する関数
 func ReadUserProfiles(ctx context.Context) {
 	// 指定したコレクションから"UserID","UserName","WeeklyStayingTime"フィールドを取得
-	docRefs := client.Collection(collectionName).Select("UserID", "UserName", "WeeklyStayingTime").Documents(ctx)
+	docRefs := client.Collection(CollectionName).Select("UserID", "UserName", "WeeklyStayingTime").Documents(ctx)
 
 	// ドキュメントを反復処理して取得
 	for {
@@ -255,7 +215,7 @@ func ReadUserProfiles(ctx context.Context) {
 func ResetWeeklyStayingTime(ctx context.Context) {
 	// 各ユーザーのWeeklyStayingTimeをリセット
 	for _, userData := range userDataList {
-		_, err := client.Collection(collectionName).Doc(userData.UserID).Update(ctx, []firestore.Update{
+		_, err := client.Collection(CollectionName).Doc(userData.UserID).Update(ctx, []firestore.Update{
 			{Path: "WeeklyStayingTime", Value: 0}, // WeeklyStayingTimeを0にリセット
 		})
 		if err != nil {
