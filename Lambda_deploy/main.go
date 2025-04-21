@@ -9,6 +9,7 @@ import (
 	"cloud.google.com/go/firestore"
 	"github.com/bwmarrin/discordgo"
 	"google.golang.org/api/option"
+	//"github.com/aws/aws-lambda-go/lambda"
 )
 
 type UserData struct {
