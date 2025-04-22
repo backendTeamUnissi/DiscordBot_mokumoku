@@ -9,9 +9,6 @@ import (
 	"google.golang.org/api/option"
 )
 
-// グローバル変数の宣言！
-var client *firestore.Client
-
 const (
 	ProjectID       = "peachtech-mokumoku" // プロジェクトID
 	CredentialsFile = "./peachtech-mokumoku-91af9d3931c9.json" // サービスアカウントの認証ファイル

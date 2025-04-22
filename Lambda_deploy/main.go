@@ -1,14 +1,9 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"time"
-
-	"cloud.google.com/go/firestore"
-	"github.com/bwmarrin/discordgo"
-	"google.golang.org/api/option"
 	//"github.com/aws/aws-lambda-go/lambda"
 )
 
@@ -17,9 +12,6 @@ type UserData struct {
 	UserName          string
 	WeeklyStayingTime int
 }
-
-// グローバル変数の宣言！（初期化はmain関数内で行う）
-var userDataList []UserData
 
 // 秒を「○時間○分○秒」形式に変換する関数
 func formatDuration(seconds int) string {
@@ -39,27 +31,27 @@ func handler() {
 	// DevModeの設定を読み込む
 	SetupDevMode()
 
-	// Firestoreクライアントの設定、初期化
-	ctx := context.Background()
-	client, err := firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile(CredentialsFile))
+	// Firestore クライアントの初期化
+	client, ctx, err := initFirestoreClient()
 	if err != nil {
 		log.Fatalf("Firestoreクライアントの初期化に失敗しました: %v", err)
 	}
-	// リソースの解放
 	defer client.Close()
 
-	// Firestoreからユーザーデータを取得する
-	userDataList, err = ReadUserProfiles(ctx, client)
+	// Firestore からユーザーデータを読み込む
+	userDataList, err := loadUserData(client, ctx)
 	if err != nil {
 		log.Fatalf("ユーザーデータの取得に失敗しました: %v", err)
 	}
 
-	// Discord APIに接続
-	dg, err := discordgo.New("Bot " + DiscordToken)
+	// Discord セッションの初期化
+	dg, err := initDiscordSession()
 	if err != nil {
 		log.Fatalf("Discordセッションの作成に失敗しました: %v", err)
 	}
-	// Botを起動し、Discordサーバーに接続
+	defer dg.Close()
+
+	// Discord サーバーに接続
 	err = dg.Open()
 	if err != nil {
 		log.Fatalf("Discordサーバーへの接続に失敗しました: %v", err)
