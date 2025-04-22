@@ -47,8 +47,12 @@ func handler() {
 	}
 	// リソースの解放
 	defer client.Close()
+	
 	// Firestoreからユーザーデータを取得する
-	ReadUserProfiles(ctx, client)
+	userDataList, err = ReadUserProfiles(ctx, client)
+	if err != nil {
+		log.Fatalf("ユーザーデータの取得に失敗しました: %v", err)
+	}
 
 	// Discord APIに接続
 	dg, err := discordgo.New("Bot " + DiscordToken)
