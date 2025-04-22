@@ -20,7 +20,6 @@ type UserData struct {
 
 // グローバル変数の宣言！（初期化はmain関数内で行う）
 var userDataList []UserData
-var err error
 
 // 秒を「○時間○分○秒」形式に変換する関数
 func formatDuration(seconds int) string {
@@ -42,7 +41,7 @@ func handler() {
 
 	// Firestoreクライアントの設定、初期化
 	ctx := context.Background()
-	client, err = firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile("./peachtech-mokumoku-91af9d3931c9.json"))
+	client, err := firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile("./peachtech-mokumoku-91af9d3931c9.json"))
 	if err != nil {
 		log.Fatalf("Firestoreクライアントの初期化に失敗しました: %v", err)
 	}
