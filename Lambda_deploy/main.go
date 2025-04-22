@@ -41,13 +41,13 @@ func handler() {
 
 	// Firestoreクライアントの設定、初期化
 	ctx := context.Background()
-	client, err := firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile("./peachtech-mokumoku-91af9d3931c9.json"))
+	client, err := firestore.NewClient(ctx, "peachtech-mokumoku", option.WithCredentialsFile(CredentialsFile))
 	if err != nil {
 		log.Fatalf("Firestoreクライアントの初期化に失敗しました: %v", err)
 	}
 	// リソースの解放
 	defer client.Close()
-	
+
 	// Firestoreからユーザーデータを取得する
 	userDataList, err = ReadUserProfiles(ctx, client)
 	if err != nil {
