@@ -3,9 +3,19 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/bwmarrin/discordgo"
 )
+
+// 秒を「○時間○分○秒」形式に変換する関数
+func formatDuration(seconds int) string {
+	duration := time.Duration(seconds) * time.Second
+	hours := int(duration.Hours())
+	minutes := int(duration.Minutes()) % 60
+	secs := int(duration.Seconds()) % 60
+	return fmt.Sprintf("%d時間%d分%d秒", hours, minutes, secs)
+}
 
 // Discordメッセージ送信用の関数（メイン関数から呼び出される）
 func SendMessages(s *discordgo.Session, channelID string, userDataList []UserData) {
