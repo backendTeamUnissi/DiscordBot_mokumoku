@@ -45,14 +45,14 @@ func SendMessages(s *discordgo.Session, channelID string, userDataList []UserDat
 func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
 	validUsers := sortUsersByStayingTime(userDataList)
 
-	message := ""
+	mentionMessage := ""
 	for i := 0; i < 3 && i < len(validUsers); i++ {
-		message += fmt.Sprintf("<@%s> ", validUsers[i].UserID)
+		mentionMessage += fmt.Sprintf("<@%s> ", validUsers[i].UserID)
 	}
-	if message == "" {
+	if mentionMessage == "" {
 		return
 	}
-	_, err := s.ChannelMessageSend(channelID, message)
+	_, err := s.ChannelMessageSend(channelID, mentionMessage)
 	if err != nil {
 		fmt.Println("Error sending normal message:", err)
 	}
@@ -62,26 +62,26 @@ func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []Us
 func sendEmbedMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
 	validUsers := sortUsersByStayingTime(userDataList)
 
-	rankCount := len(validUsers)
-	maxDisplayRank := 3
-	displayRank := rankCount
+	rankedNum := len(validUsers)
+	maxRankNum := 3
+	showRankNum := rankedNum
 	// ユーザーが3以上の時は、テキストをトップ３で固定
-	if displayRank > maxDisplayRank {
-		displayRank = maxDisplayRank
+	if showRankNum > maxRankNum {
+		showRankNum = maxRankNum
 	}
 
-	title := fmt.Sprintf("🔥今週の滞在時間トップ%d🔥", displayRank)
+	title := fmt.Sprintf("🔥今週の滞在時間トップ%d🔥", showRankNum)
 	var descriptionBuilder strings.Builder
 
-	if rankCount == 0 {
+	if rankedNum == 0 {
 		title = "今週の滞在者なし😢"
 		descriptionBuilder.WriteString("今週はもくもくしていませんでした…\n")
 	} else {
 		descriptionBuilder.WriteString("今週のもくもくを頑張ったユーザーはこちら！\n")
 	}
 
-	for i := 0; i < maxDisplayRank; i++ {
-		if i < rankCount {
+	for i := 0; i < maxRankNum; i++ {
+		if i < rankedNum {
 			userID := validUsers[i].UserID
 			stayingTime := formatDuration(validUsers[i].WeeklyStayingTime)
 
