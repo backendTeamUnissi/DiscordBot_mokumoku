@@ -65,7 +65,7 @@ func sendEmbedMessage(s *discordgo.Session, channelID string, userDataList []Use
 	rankedNum := len(validUsers)
 	maxRankNum := 3
 	showRankNum := rankedNum
-	// ユーザーが3以上の時は、テキストをトップ３で固定
+	// ユーザーが3人より大きい場合は、テキストをトップ３で固定
 	if showRankNum > maxRankNum {
 		showRankNum = maxRankNum
 	}
