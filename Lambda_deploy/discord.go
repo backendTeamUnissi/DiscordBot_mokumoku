@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -17,6 +18,23 @@ func formatDuration(seconds int) string {
 	return fmt.Sprintf("%d時間%d分%d秒", hours, minutes, secs)
 }
 
+// ユーザーの滞在時間を基にソートする共通関数
+func sortUsersByStayingTime(userDataList []UserData) []UserData {
+	validUsers := []UserData{}
+	for _, user := range userDataList {
+		if user.WeeklyStayingTime > 0 {
+			validUsers = append(validUsers, user)
+		}
+	}
+
+	// 滞在時間が多い順にソート
+	sort.Slice(validUsers, func(i, j int) bool {
+		return validUsers[i].WeeklyStayingTime > validUsers[j].WeeklyStayingTime
+	})
+
+	return validUsers
+}
+
 // Discordメッセージ送信用の関数（メイン関数から呼び出される）
 func SendMessages(s *discordgo.Session, channelID string, userDataList []UserData) {
 	sendNormalMessage(s, channelID, userDataList)
@@ -25,16 +43,16 @@ func SendMessages(s *discordgo.Session, channelID string, userDataList []UserDat
 
 // 通常のテキストメッセージを送信
 func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
-	message := ""
-	for i := 0; i < 3 && i < len(userDataList); i++ {
-		if userDataList[i].WeeklyStayingTime > 0 {
-			message += fmt.Sprintf("<@%s> ", userDataList[i].UserID)
-		}
+	validUsers := sortUsersByStayingTime(userDataList)
+
+	mentionMessage := ""
+	for i := 0; i < 3 && i < len(validUsers); i++ {
+		mentionMessage += fmt.Sprintf("<@%s> ", validUsers[i].UserID)
 	}
-	if message == "" {
+	if mentionMessage == "" {
 		return
 	}
-	_, err := s.ChannelMessageSend(channelID, message)
+	_, err := s.ChannelMessageSend(channelID, mentionMessage)
 	if err != nil {
 		fmt.Println("Error sending normal message:", err)
 	}
@@ -42,33 +60,34 @@ func sendNormalMessage(s *discordgo.Session, channelID string, userDataList []Us
 
 // Embedメッセージを送信
 func sendEmbedMessage(s *discordgo.Session, channelID string, userDataList []UserData) {
-	validUsers := []UserData{}
-	for _, user := range userDataList {
-		if user.WeeklyStayingTime > 0 {
-			validUsers = append(validUsers, user)
-		}
+	validUsers := sortUsersByStayingTime(userDataList)
+
+	rankedNum := len(validUsers)
+	maxRankNum := 3
+	showRankNum := rankedNum
+	// ユーザーが3人より大きい場合は、テキストをトップ３で固定
+	if showRankNum > maxRankNum {
+		showRankNum = maxRankNum
 	}
 
-	rankCount := len(validUsers)
-	title := fmt.Sprintf("🔥今週の滞在時間トップ%d🔥", rankCount)
-
+	title := fmt.Sprintf("🔥今週の滞在時間トップ%d🔥", showRankNum)
 	var descriptionBuilder strings.Builder
-	if rankCount == 0 {
+
+	if rankedNum == 0 {
 		title = "今週の滞在者なし😢"
 		descriptionBuilder.WriteString("今週はもくもくしていませんでした…\n")
 	} else {
 		descriptionBuilder.WriteString("今週のもくもくを頑張ったユーザーはこちら！\n")
 	}
 
-	for i := 0; i < 3; i++ {
-		if i < rankCount {
+	for i := 0; i < maxRankNum; i++ {
+		if i < rankedNum {
 			userID := validUsers[i].UserID
 			stayingTime := formatDuration(validUsers[i].WeeklyStayingTime)
 
 			if i == 0 {
 				descriptionBuilder.WriteString("\n")
 			}
-
 			descriptionBuilder.WriteString(fmt.Sprintf("**%d位:** <@%s>\n**滞在時間:** %s\n", i+1, userID, stayingTime))
 		} else {
 			descriptionBuilder.WriteString(fmt.Sprintf("**%d位:** ---\n**滞在時間:** ---\n", i+1))
