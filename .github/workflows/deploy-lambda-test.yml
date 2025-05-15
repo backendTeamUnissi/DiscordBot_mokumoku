@@ -3,8 +3,6 @@ name: Test_Deploy to AWS Lambda
 on:
   push:
     branches: ["dev"]
-    paths:
-      - "Lambda_deploy_Test/**"
 
 jobs:
   deploy:
@@ -37,5 +35,4 @@ jobs:
           aws-region: ap-northeast-1 # 東京リージョン
           function-name: TestLambdaFunction # 実際のLambda関数名に置き換え
           zip-file: Lambda_deploy_Test/function.zip
-
 #hello
