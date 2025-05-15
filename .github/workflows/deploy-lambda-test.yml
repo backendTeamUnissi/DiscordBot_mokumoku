@@ -22,7 +22,7 @@ jobs:
       - name: Build and zip # ビルド & ZIP作成
         run: |
           cd Lambda_deploy_Test
-          GOOS=linux GOARCH=amd64 go build -o main main.go
+          GOOS=linux GOARCH=amd64 go build -o bootstrap main.go
           zip function.zip bootstrap
 
       - name: Deploy to AWS Lambda # AWS Lambdaへデプロイ
