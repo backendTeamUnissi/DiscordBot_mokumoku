@@ -10,6 +10,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
 
+    # OIDCを利用するためにはid-tokenパーミッションが必要
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
