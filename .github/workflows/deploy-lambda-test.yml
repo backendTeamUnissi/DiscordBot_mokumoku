@@ -32,7 +32,7 @@ jobs:
 
       - name: Deploy to AWS Lambda # AWS Lambdaへデプロイ
         uses: appleboy/lambda-action@v0.1.7
-        run: |
+        with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}\ \
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }} \
           --aws-region: ap-northeast-1  \
