@@ -7,7 +7,7 @@ import (
 )
 
 func HandleRequest(ctx context.Context) (string, error) {
-	return "Hello from Lambda!!!", nil
+	return "Hello from Lambda!!!!!", nil
 }
 
 func main() {

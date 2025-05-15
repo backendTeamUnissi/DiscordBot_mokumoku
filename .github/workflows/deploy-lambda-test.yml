@@ -3,6 +3,8 @@ name: Test_Deploy to AWS Lambda
 on:
   push:
     branches: ["dev"]
+    paths:
+      - "Lambda_deploy_Test/**"
 
 jobs:
   deploy:
