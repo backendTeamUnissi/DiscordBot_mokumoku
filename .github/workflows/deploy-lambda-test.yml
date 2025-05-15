@@ -2,33 +2,28 @@ name: Test_Deploy to AWS Lambda
 
 on:
   push:
-    branches:
-      - dev
+    branches: ["dev"]
     paths:
-      - Lambda_deploy_Test/**
+      - "Lambda_deploy_Test/**"
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: Check out repository
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v3
         with:
           go-version: "1.23" # Goのバージョン
 
-      - name: Build Lambda binary # Lambda用にLinux用バイナリを生成
+      - name: Build and zip # ビルド & ZIP作成
         run: |
           cd Lambda_deploy_Test
           GOOS=linux GOARCH=amd64 go build -o main main.go
-
-      - name: Zip Lambda binary # ZIPファイルを作成
-        run: |
-          cd Lambda_deploy_Test
-          zip function.zip main
+          zip function.zip bootstrap
 
       - name: Deploy to AWS Lambda # AWS Lambdaへデプロイ
         uses: appleboy/lambda-action@v0.1.7
@@ -38,4 +33,3 @@ jobs:
           aws-region: ap-northeast-1 # 東京リージョン
           function-name: TestLambdaFunction # 実際のLambda関数名に置き換え
           zip-file: Lambda_deploy_Test/function.zip
-#hello
